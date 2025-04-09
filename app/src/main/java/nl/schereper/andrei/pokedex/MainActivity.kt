@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import nl.schereper.andrei.pokedex.ui.theme.PokedexTheme
 import nl.schereper.andrei.pokedex.views.MainScreenView
 import nl.schereper.andrei.pokedex.views.SplashScreenView
 
@@ -19,16 +20,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var showSplash by remember { mutableStateOf(true) }
+            PokedexTheme(dynamicColor = false) {
+                var showSplash by remember { mutableStateOf(true) }
 
-            if (showSplash) {
-                SplashScreenView(
-                    onFinished = {
-                        showSplash = false
-                    }
-                )
-            } else {
-                MainScreenView()
+                if (showSplash) {
+                    SplashScreenView(
+                        onFinished = {
+                            showSplash = false
+                        }
+                    )
+                } else {
+                    MainScreenView()
+                }
             }
         }
     }

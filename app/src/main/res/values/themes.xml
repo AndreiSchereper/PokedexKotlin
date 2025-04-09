@@ -4,7 +4,6 @@
 
     <style name="Theme.Pokedex.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#FFFDF3</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/pokemonlogo</item>
         <item name="postSplashScreenTheme">@style/Theme.Pokedex</item>
     </style>
 </resources>
