@@ -3,34 +3,52 @@ package nl.schereper.andrei.pokedex
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.runtime.*
+import androidx.navigation.compose.rememberNavController
 import nl.schereper.andrei.pokedex.ui.theme.PokedexTheme
-import nl.schereper.andrei.pokedex.views.MainScreenView
-import nl.schereper.andrei.pokedex.views.SplashScreenView
+import nl.schereper.andrei.pokedex.views.FavoritesScreenView
+import nl.schereper.andrei.pokedex.views.PokedexScreenView
+import nl.schereper.andrei.pokedex.views.components.NavigationBar
+import nl.schereper.andrei.pokedex.views.components.NavigationItem
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
-
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            PokedexTheme(dynamicColor = false) {
-                var showSplash by remember { mutableStateOf(true) }
 
-                if (showSplash) {
-                    SplashScreenView(
-                        onFinished = {
-                            showSplash = false
+        setContent {
+            PokedexTheme {
+                val navController = rememberNavController()
+                val navItems = listOf(
+                    NavigationItem.Pokedex,
+                    NavigationItem.Favorites
+                )
+
+                Scaffold(
+                    bottomBar = {
+                        NavigationBar(
+                            navController = navController,
+                            items = navItems
+                        )
+                    }
+                ) { innerPadding ->
+                    NavHost(
+                        navController = navController,
+                        startDestination = NavigationItem.Pokedex.route,
+                        modifier = Modifier.padding(innerPadding)
+                    ) {
+                        composable(NavigationItem.Pokedex.route) {
+                            PokedexScreenView()
                         }
-                    )
-                } else {
-                    MainScreenView()
+                        composable(NavigationItem.Favorites.route) {
+                            FavoritesScreenView()
+                        }
+                    }
                 }
             }
         }
