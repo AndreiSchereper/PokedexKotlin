@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            PokedexTheme {
+            PokedexTheme(dynamicColor = false) {
                 val navController = rememberNavController()
                 val navItems = listOf(
                     NavigationItem.Pokedex,

@@ -1,19 +1,19 @@
 package nl.schereper.andrei.pokedex.views
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
 import nl.schereper.andrei.pokedex.viewmodels.PokedexViewModel
 import nl.schereper.andrei.pokedex.views.components.PokemonListItem
 import nl.schereper.andrei.pokedex.views.components.VerticalScrollbar
@@ -24,7 +24,7 @@ fun PokedexScreenView() {
     val pokemonList by viewModel.pokemonList.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val endReached by viewModel.endReached.collectAsState()
-    val listState = rememberLazyListState()
+    val listState = rememberLazyGridState()
 
     // pagination trigger
     LaunchedEffect(listState) {
@@ -36,25 +36,32 @@ fun PokedexScreenView() {
             }
     }
 
-    Box {
-        LazyColumn(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background) // 🎨 from theme
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
             modifier = Modifier
-                .padding(end = 16.dp)
+                .padding(end = 12.dp)
                 .fillMaxSize(),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            state = listState
         ) {
             items(pokemonList) { pokemon ->
                 PokemonListItem(
                     name = pokemon.name,
                     imageUrl = pokemon.imageUrl,
                     type = pokemon.type,
+                    id = pokemon.id,
                     onClick = { /* TODO: Navigate to detail */ }
                 )
             }
 
             if (isLoading) {
-                item {
+                item(span = { GridItemSpan(2) }) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

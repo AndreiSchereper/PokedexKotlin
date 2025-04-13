@@ -3,61 +3,59 @@ package nl.schereper.andrei.pokedex.views.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
-import androidx.compose.ui.unit.IntOffset
 
 @Composable
 fun VerticalScrollbar(
-    listState: LazyListState,
+    listState: LazyGridState,
     modifier: Modifier = Modifier,
     trackColor: Color = Color.LightGray.copy(alpha = 0.3f),
-    thumbColor: Color = Color.DarkGray.copy(alpha = 0.8f)
+    thumbColor: Color = Color.DarkGray.copy(alpha = 0.9f)
 ) {
     val totalItems = listState.layoutInfo.totalItemsCount
     val visibleItems = listState.layoutInfo.visibleItemsInfo
+
     if (totalItems == 0 || visibleItems.isEmpty()) return
 
     val firstVisibleIndex = visibleItems.first().index
-
-    // Proportion of list visible
-    val visibleRatio = visibleItems.size.toFloat() / totalItems
     val scrollProgress = firstVisibleIndex.toFloat() / totalItems
+    val visibleRatio = visibleItems.size.toFloat() / totalItems
 
-    // Ensure the thumb is always at least 32dp tall
-    val minThumbHeight = 32.dp
-    val calculatedThumbHeight = (visibleRatio * 300).dp // scale it up
-    val thumbHeight = maxOf(calculatedThumbHeight, minThumbHeight)
+    val trackHeight = 300.dp // fixed height that looks good
+    val thumbHeight = (visibleRatio * 300).dp.coerceAtLeast(32.dp)
+    val thumbOffset = (scrollProgress * (300 - thumbHeight.value)).dp
 
     Box(
         modifier = modifier
-            .fillMaxHeight()
-            .width(8.dp)
-            .padding(end = 4.dp),
+            .height(trackHeight)
+            .width(8.dp),
         contentAlignment = Alignment.TopEnd
     ) {
+        // Scroll track
         Box(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(4.dp)
-                .background(trackColor, shape = RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(4.dp))
+                .background(trackColor)
         )
 
+        // Scroll thumb
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .width(4.dp)
                 .height(thumbHeight)
-                .offset {
-                    val trackHeight = 300.dp.toPx() - thumbHeight.toPx()
-                    IntOffset(x = 0, y = (scrollProgress * trackHeight).roundToInt())
-                }
-                .background(thumbColor, shape = RoundedCornerShape(4.dp))
+                .offset { IntOffset(0, thumbOffset.roundToPx()) }
+                .clip(RoundedCornerShape(4.dp))
+                .background(thumbColor)
         )
     }
 }
