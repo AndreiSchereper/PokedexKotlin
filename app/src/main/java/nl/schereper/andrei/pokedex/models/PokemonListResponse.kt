@@ -11,3 +11,10 @@ data class PokemonEntry(
     val name: String,
     val url: String
 )
+
+data class PokemonListItemData(
+    val name: String,
+    val id: Int,
+    val imageUrl: String,
+    val type: String
+)
