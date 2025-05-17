@@ -16,13 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import kotlinx.coroutines.flow.collectLatest
 import nl.schereper.andrei.pokedex.viewmodels.PokedexViewModel
 import nl.schereper.andrei.pokedex.views.components.PokemonListItem
 import nl.schereper.andrei.pokedex.views.components.VerticalScrollbar
 
 @Composable
-fun PokedexScreenView() {
+fun PokedexScreenView(navController: NavHostController) {
     val viewModel: PokedexViewModel = viewModel()
 
     /* collect the *filtered* list, not the raw list */
@@ -81,7 +82,7 @@ fun PokedexScreenView() {
                         imageUrl = pokemon.imageUrl,
                         type     = pokemon.type,
                         id       = pokemon.id,
-                        onClick  = { /* TODO: Navigate to detail */ }
+                        onClick  = { navController.navigate("details/${pokemon.id}") }
                     )
                 }
 
