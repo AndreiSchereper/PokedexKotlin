@@ -65,4 +65,5 @@ dependencies {
     implementation(libs.retrofit2.converter.gson)
     implementation(libs.gson)
     implementation(libs.coil.compose)
+    implementation(libs.google.material)
 }

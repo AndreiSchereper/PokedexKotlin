@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Pokedex" parent="android:Theme.Material.Light.NoActionBar" />
 
+    <!--  ⬇️ NEW parent: Material3 • DayNight • NoActionBar  -->
+    <style name="Theme.Pokedex" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- optional: keep the window chrome transparent -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!--  API-31+ SplashScreen theme  -->
     <style name="Theme.Pokedex.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#FFFDF3</item>
         <item name="postSplashScreenTheme">@style/Theme.Pokedex</item>
     </style>
+
 </resources>
