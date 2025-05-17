@@ -9,11 +9,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.collectLatest
 import nl.schereper.andrei.pokedex.viewmodels.PokedexViewModel
 import nl.schereper.andrei.pokedex.views.components.PokemonListItem
 import nl.schereper.andrei.pokedex.views.components.VerticalScrollbar
@@ -21,64 +24,88 @@ import nl.schereper.andrei.pokedex.views.components.VerticalScrollbar
 @Composable
 fun PokedexScreenView() {
     val viewModel: PokedexViewModel = viewModel()
-    val pokemonList by viewModel.pokemonList.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val endReached by viewModel.endReached.collectAsState()
-    val listState = rememberLazyGridState()
 
-    // pagination trigger
-    LaunchedEffect(listState) {
+    /* collect the *filtered* list, not the raw list */
+    val pokemonList by viewModel.visiblePokemon.collectAsState()
+    val isLoading   by viewModel.isLoading.collectAsState()
+    val endReached  by viewModel.endReached.collectAsState()
+    val query       by viewModel.searchQuery.collectAsState()
+
+    val listState   = rememberLazyGridState()
+
+    /* ────── pagination trigger; disabled while searching ────── */
+    LaunchedEffect(listState, query) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
-            .collect { lastVisibleItem ->
-                if (lastVisibleItem == pokemonList.lastIndex && !endReached && !isLoading) {
-                    viewModel.loadPokemonList()
+            .collectLatest { lastVisibleItem ->
+                if (query.isBlank() &&
+                    lastVisibleItem == pokemonList.lastIndex &&
+                    !endReached && !isLoading
+                ) {
+                    viewModel.maybeLoadNextPage()
                 }
             }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background) // 🎨 from theme
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+        /* ────────────── search bar ────────────── */
+        OutlinedTextField(
+            value = query,
+            onValueChange = viewModel::onSearchQueryChange,
             modifier = Modifier
-                .padding(end = 12.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            state = listState
-        ) {
-            items(pokemonList) { pokemon ->
-                PokemonListItem(
-                    name = pokemon.name,
-                    imageUrl = pokemon.imageUrl,
-                    type = pokemon.type,
-                    id = pokemon.id,
-                    onClick = { /* TODO: Navigate to detail */ }
-                )
-            }
+                .fillMaxWidth()
+                .padding(16.dp),
+            singleLine = true,
+            label = { Text("Search Pokémon") }
+        )
 
-            if (isLoading) {
-                item(span = { GridItemSpan(2) }) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+        Spacer(Modifier.height(4.dp))
+
+        /* ─────────────── grid ─────────────── */
+        Box(Modifier.weight(1f)) {
+            LazyVerticalGrid(
+                columns              = GridCells.Fixed(2),
+                state                = listState,
+                verticalArrangement  = Arrangement.spacedBy(12.dp),
+                horizontalArrangement= Arrangement.spacedBy(12.dp),
+                modifier             = Modifier
+                    .fillMaxSize()
+                    .padding(end = 12.dp)
+            ) {
+                items(pokemonList) { pokemon ->
+                    PokemonListItem(
+                        name     = pokemon.name,
+                        imageUrl = pokemon.imageUrl,
+                        type     = pokemon.type,
+                        id       = pokemon.id,
+                        onClick  = { /* TODO: Navigate to detail */ }
+                    )
+                }
+
+                if (isLoading) {
+                    item(span = { GridItemSpan(2) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
             }
-        }
 
-        VerticalScrollbar(
-            listState = listState,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(vertical = 16.dp)
-        )
+            /* overlay scrollbar */
+            VerticalScrollbar(
+                listState = listState,
+                modifier  = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(vertical = 16.dp)
+            )
+        }
     }
 }
