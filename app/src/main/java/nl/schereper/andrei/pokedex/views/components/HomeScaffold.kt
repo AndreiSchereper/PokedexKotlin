@@ -14,8 +14,7 @@ import nl.schereper.andrei.pokedex.views.PokedexScreenView
 import nl.schereper.andrei.pokedex.views.details.PokemonDetailsScreenView
 
 /**
- * This is exactly the code you already had in MainActivity,
- * just extracted so it can sit behind the splash screen.
+ * Root scaffold that lives behind the splash screen.
  */
 @Composable
 fun HomeScaffold() {
@@ -39,19 +38,16 @@ fun HomeScaffold() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(NavigationItem.Pokedex.route) {
-                PokedexScreenView(navController)   // pass controller down
+                PokedexScreenView(navController)          // grid
             }
             composable(NavigationItem.Favorites.route) {
-                FavoritesScreenView()
+                FavoritesScreenView()                     // favourites
             }
-
-            /* ← NEW detail destination */
             composable(
                 route = "details/{id}",
                 arguments = listOf(navArgument("id") { type = NavType.IntType })
-            ) { backStack ->
-                val id = backStack.arguments!!.getInt("id")
-                PokemonDetailsScreenView()
+            ) {
+                PokemonDetailsScreenView(navController)   // detail, back-aware
             }
         }
     }
