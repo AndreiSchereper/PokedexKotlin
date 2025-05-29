@@ -1,11 +1,14 @@
 package nl.schereper.andrei.pokedex.views.details
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -15,13 +18,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import nl.schereper.andrei.pokedex.models.PokemonDetails
 import nl.schereper.andrei.pokedex.models.imageUrl
 import nl.schereper.andrei.pokedex.utils.typeColorMap
+import nl.schereper.andrei.pokedex.viewmodels.EvolutionStage
 import nl.schereper.andrei.pokedex.viewmodels.PokemonDetailsViewModel
+
+/* ───────────────────────── Screen entry ───────────────────────── */
 
 @Composable
 fun PokemonDetailsScreenView(
@@ -29,22 +36,24 @@ fun PokemonDetailsScreenView(
     modifier: Modifier = Modifier
 ) {
     val vm: PokemonDetailsViewModel = viewModel()
-    val pokemon by vm.pokemon.collectAsState()
+    val pokemon   by vm.pokemon.collectAsState()
+    val evolution by vm.evolution.collectAsState()
 
-    pokemon?.let { PokemonContent(it, navController, modifier) }
+    pokemon?.let { PokemonContent(it, evolution, navController, modifier) }
         ?: Box(modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
 }
 
-/* ──────────────────────────── UI ──────────────────────────── */
+/* ───────────────────────── Screen body ───────────────────────── */
 
 @Composable
 private fun PokemonContent(
     p: PokemonDetails,
+    evo: List<EvolutionStage>,
     nav: NavHostController,
     modifier: Modifier = Modifier
 ) {
-    val primaryColor = typeColorMap[p.types.firstOrNull()?.type?.name?.lowercase()]
-        ?: MaterialTheme.colorScheme.primary
+    val firstTypeName = p.types.firstOrNull()?.type?.name?.lowercase() ?: ""
+    val primaryColor  = typeColorMap[firstTypeName] ?: MaterialTheme.colorScheme.primary
 
     var tab by remember { mutableIntStateOf(0) }
 
@@ -56,10 +65,11 @@ private fun PokemonContent(
             .padding(bottom = 32.dp)
     ) {
         Header(p, nav)
+
+        /* ── Tabs ─────────────────────────────────────────── */
         TabRow(
             selectedTabIndex = tab,
             containerColor   = Color.Transparent,
-            // text colour fallback; real text colour below
             contentColor     = primaryColor,
             indicator        = { tabPositions ->
                 TabRowDefaults.Indicator(
@@ -71,10 +81,7 @@ private fun PokemonContent(
             }
         ) {
             listOf("About", "Stats", "Evolution").forEachIndexed { i, t ->
-                Tab(
-                    selected = tab == i,
-                    onClick  = { tab = i }
-                ) {
+                Tab(selected = tab == i, onClick = { tab = i }) {
                     Text(
                         t,
                         style      = MaterialTheme.typography.titleMedium,
@@ -86,15 +93,22 @@ private fun PokemonContent(
                 }
             }
         }
+
         when (tab) {
             0 -> AboutTab(p)
-            1 -> StatsTab(p, primaryColor)   // ← pass colour
-            else -> EvolutionTab()
+            1 -> StatsTab(p, primaryColor)
+            else -> EvolutionTab(
+                stages    = evo,
+                borderType= firstTypeName,
+                accent    = primaryColor,
+                nav       = nav,
+                currentId = p.id
+            )
         }
     }
 }
 
-/* ───────────────────────── header ───────────────────────── */
+/* ───────────────────────── Header ───────────────────────── */
 
 @Composable
 private fun Header(
@@ -112,34 +126,28 @@ private fun Header(
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
             }
             Text(
-                text       = p.name.replaceFirstChar { it.uppercase() },
+                p.name.replaceFirstChar { it.uppercase() },
                 style      = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Black,
                 modifier   = Modifier.weight(1f)
             )
             Text(
-                text  = "#${p.id.toString().padStart(3, '0')}",
+                "#${p.id.toString().padStart(3, '0')}",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        /* Solid-colour chips, bold label, no border */
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             p.types.forEach { slot ->
                 val typeName = slot.type.name.lowercase()
-                val bgColor  = typeColorMap[typeName]
-                    ?: MaterialTheme.colorScheme.primary
+                val bgColor  = typeColorMap[typeName] ?: MaterialTheme.colorScheme.primary
                 val fgColor  = MaterialTheme.colorScheme.onPrimary
 
                 AssistChip(
                     onClick = {},
-                    label   = {
-                        Text(
-                            typeName.replaceFirstChar { it.uppercase() },
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
+                    label   = { Text(typeName.replaceFirstChar { it.uppercase() },
+                        fontWeight = FontWeight.Bold) },
                     colors  = AssistChipDefaults.assistChipColors(
                         containerColor = bgColor,
                         labelColor     = fgColor
@@ -161,7 +169,7 @@ private fun Header(
     }
 }
 
-/* ──────────────────────── About tab ─────────────────────── */
+/* ───────────────────────── About tab ───────────────────────── */
 
 @Composable
 private fun AboutTab(p: PokemonDetails) {
@@ -189,13 +197,10 @@ private fun AboutTab(p: PokemonDetails) {
     }
 }
 
-/* ──────────────────────── Stats tab ─────────────────────── */
+/* ───────────────────────── Stats tab ───────────────────────── */
 
 @Composable
-private fun StatsTab(
-    p: PokemonDetails,
-    barColor: Color                      // ← colour from first type
-) {
+private fun StatsTab(p: PokemonDetails, barColor: Color) {
     Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
         p.stats.forEach { stat ->
             val value = stat.base_stat.coerceAtMost(255)
@@ -203,7 +208,6 @@ private fun StatsTab(
             val name  = stat.stat.name.replace('-', ' ')
                 .replaceFirstChar(Char::uppercase)
 
-            /* Title row above the bar */
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -215,7 +219,6 @@ private fun StatsTab(
                 Text(value.toString(), fontWeight = FontWeight.SemiBold)
             }
 
-            /* Progress bar */
             LinearProgressIndicator(
                 progress   = ratio,
                 modifier   = Modifier
@@ -223,7 +226,7 @@ private fun StatsTab(
                     .height(8.dp)
                     .clip(MaterialTheme.shapes.small),
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                color      = barColor                    // ← coloured bar
+                color      = barColor
             )
 
             Spacer(Modifier.height(20.dp))
@@ -231,19 +234,124 @@ private fun StatsTab(
     }
 }
 
-/* ─────────────────── Evolution tab (placeholder) ─────────────────── */
+/* ───────────────────────── Evolution tab ───────────────────────── */
 
 @Composable
-private fun EvolutionTab() =
-    Box(
+private fun EvolutionTab(
+    stages: List<EvolutionStage>,
+    borderType: String,
+    accent: Color,
+    nav: NavHostController,
+    currentId: Int
+) {
+    if (stages.isEmpty()) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp),
+            Alignment.Center
+        ) { Text("No evolution data.", fontWeight = FontWeight.Bold) }
+        return
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    Column(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
-        Alignment.Center
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            "Evolution chain coming soon…",
-            style      = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        stages.forEachIndexed { index, stage ->
+            val isCurrent = stage.id == currentId
+            EvolutionWideCard(
+                stage      = stage,
+                borderType = borderType,
+                enabled    = !isCurrent,
+                onClick    = {
+                    if (!isCurrent) nav.navigate("details/${stage.id}")
+                }
+            )
+            if (index != stages.lastIndex) {
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = "evolves to",
+                    tint = accent,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .padding(vertical = 8.dp)
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
     }
+}
+
+/* ─────────── Wide card component ─────────── */
+
+@Composable
+private fun EvolutionWideCard(
+    stage: EvolutionStage,
+    borderType: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val typeColor      = typeColorMap[borderType] ?: MaterialTheme.colorScheme.primary
+    val containerColor = MaterialTheme.colorScheme.background
+    val textColor      = MaterialTheme.colorScheme.onSurface
+
+    Card(
+        onClick  = onClick,
+        enabled  = enabled,
+        shape    = RoundedCornerShape(16.dp),
+        border   = BorderStroke(2.dp, typeColor),
+        elevation= CardDefaults.cardElevation(10.dp),
+        colors   = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor   = textColor,
+            disabledContainerColor = containerColor,
+            disabledContentColor   = textColor       // keep full opacity
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(140.dp)
+    ) {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stage.name.replaceFirstChar(Char::uppercase),
+                    style      = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontSize   = 22.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(typeColor)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        "#${stage.id.toString().padStart(3, '0')}",
+                        color      = containerColor,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize   = 14.sp
+                    )
+                }
+            }
+
+            AsyncImage(
+                model = stage.imageUrl,
+                contentDescription = stage.name,
+                modifier = Modifier
+                    .size(116.dp)
+                    .padding(start = 8.dp)
+            )
+        }
+    }
+}

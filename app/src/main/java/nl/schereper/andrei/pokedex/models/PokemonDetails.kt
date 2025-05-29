@@ -52,6 +52,22 @@ data class Sprites(
     }
 }
 
+/* pokemon-species/{id} */
+data class PokemonSpecies(
+    @SerializedName("evolution_chain") val evolution_chain: EvolutionChainRef
+) { data class EvolutionChainRef(val url: String) }
+
+/* evolution-chain/{id} (simplified) */
+data class EvolutionChain(
+    val id: Int,
+    val chain: EvolutionNode
+)
+
+data class EvolutionNode(
+    val species: NamedApiResource,
+    @SerializedName("evolves_to") val evolves_to: List<EvolutionNode>
+)
+
 /* tiny extension to reach the art URL safely */
 val PokemonDetails.imageUrl: String?
     get() = sprites.other?.officialArtwork?.frontDefault
