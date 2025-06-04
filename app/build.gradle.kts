@@ -66,4 +66,5 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.coil.compose)
     implementation(libs.google.material)
+    implementation(libs.androidx.datastore.preferences)
 }

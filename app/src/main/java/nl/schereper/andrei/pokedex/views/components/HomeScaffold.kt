@@ -41,7 +41,7 @@ fun HomeScaffold() {
                 PokedexScreenView(navController)          // grid
             }
             composable(NavigationItem.Favorites.route) {
-                FavoritesScreenView()                     // favourites
+                FavoritesScreenView(navController)                     // favourites
             }
             composable(
                 route = "details/{id}",
