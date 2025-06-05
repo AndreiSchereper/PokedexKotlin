@@ -8,7 +8,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -26,6 +28,7 @@ import nl.schereper.andrei.pokedex.models.PokemonDetails
 import nl.schereper.andrei.pokedex.models.imageUrl
 import nl.schereper.andrei.pokedex.utils.typeColorMap
 import nl.schereper.andrei.pokedex.viewmodels.EvolutionStage
+import nl.schereper.andrei.pokedex.viewmodels.FavoritesViewModel
 import nl.schereper.andrei.pokedex.viewmodels.PokemonDetailsViewModel
 
 /* ───────────────────────── Screen entry ───────────────────────── */
@@ -36,11 +39,22 @@ fun PokemonDetailsScreenView(
     modifier: Modifier = Modifier
 ) {
     val vm: PokemonDetailsViewModel = viewModel()
+    val favVm: FavoritesViewModel   = viewModel()
+
     val pokemon   by vm.pokemon.collectAsState()
     val evolution by vm.evolution.collectAsState()
+    val favIds    by favVm.favorites.collectAsState()
 
-    pokemon?.let { PokemonContent(it, evolution, navController, modifier) }
-        ?: Box(modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+    pokemon?.let {
+        PokemonContent(
+            p           = it,
+            evo         = evolution,
+            nav         = navController,
+            isFavorite  = favIds.contains(it.id),
+            onToggleFav = { favVm.toggle(it.id) },
+            modifier    = modifier
+        )
+    } ?: Box(modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
 }
 
 /* ───────────────────────── Screen body ───────────────────────── */
@@ -50,6 +64,8 @@ private fun PokemonContent(
     p: PokemonDetails,
     evo: List<EvolutionStage>,
     nav: NavHostController,
+    isFavorite: Boolean,
+    onToggleFav: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val firstTypeName = p.types.firstOrNull()?.type?.name?.lowercase() ?: ""
@@ -64,9 +80,9 @@ private fun PokemonContent(
             .background(MaterialTheme.colorScheme.background)
             .padding(bottom = 32.dp)
     ) {
-        Header(p, nav)
+        Header(p, nav, primaryColor, isFavorite, onToggleFav)
 
-        /* ── Tabs ─────────────────────────────────────────── */
+        /* Tabs */
         TabRow(
             selectedTabIndex = tab,
             containerColor   = Color.Transparent,
@@ -113,44 +129,69 @@ private fun PokemonContent(
 @Composable
 private fun Header(
     p: PokemonDetails,
-    nav: NavHostController
+    nav: NavHostController,
+    primaryColor: Color,
+    isFavorite: Boolean,
+    onToggleFav: () -> Unit
 ) {
+    val headerBg       = primaryColor.copy(alpha = 0.18f)
+    val heartBrightRed = Color(0xFFE53935)
+    val heartGrey      = MaterialTheme.colorScheme.onSurfaceVariant
+
     Column(
         Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(headerBg)
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { nav.popBackStack() }) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
             }
+
             Text(
                 p.name.replaceFirstChar { it.uppercase() },
                 style      = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Black,
                 modifier   = Modifier.weight(1f)
             )
-            Text(
-                "#${p.id.toString().padStart(3, '0')}",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            /* Right-hand column: plain ID text then big heart */
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "#${p.id.toString().padStart(3, '0')}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                IconButton(
+                    onClick  = onToggleFav,
+                    modifier = Modifier
+                        .size(32.dp)                 // larger button
+                        .padding(top = 4.dp)
+                ) {
+                    Icon(
+                        if (isFavorite) Icons.Filled.Favorite
+                        else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "toggle favorite",
+                        tint = if (isFavorite) heartBrightRed else heartGrey,
+                        modifier = Modifier.size(28.dp)   // larger icon
+                    )
+                }
+            }
         }
 
+        /* type chips */
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             p.types.forEach { slot ->
-                val typeName = slot.type.name.lowercase()
-                val bgColor  = typeColorMap[typeName] ?: MaterialTheme.colorScheme.primary
-                val fgColor  = MaterialTheme.colorScheme.onPrimary
-
+                val tn = slot.type.name.lowercase()
+                val bg = typeColorMap[tn] ?: MaterialTheme.colorScheme.primary
                 AssistChip(
                     onClick = {},
-                    label   = { Text(typeName.replaceFirstChar { it.uppercase() },
+                    label   = { Text(tn.replaceFirstChar(Char::uppercase),
                         fontWeight = FontWeight.Bold) },
                     colors  = AssistChipDefaults.assistChipColors(
-                        containerColor = bgColor,
-                        labelColor     = fgColor
+                        containerColor = bg,
+                        labelColor     = MaterialTheme.colorScheme.onPrimary
                     ),
                     border  = null
                 )
@@ -168,7 +209,6 @@ private fun Header(
         )
     }
 }
-
 /* ───────────────────────── About tab ───────────────────────── */
 
 @Composable

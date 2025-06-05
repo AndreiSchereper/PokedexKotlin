@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,9 +30,11 @@ fun PokemonListItem(
     onToggleFavorite: () -> Unit,
     onClick: () -> Unit
 ) {
-    val typeColor       = typeColorMap[type.lowercase()] ?: MaterialTheme.colorScheme.primary
-    val containerColor  = MaterialTheme.colorScheme.background
-    val textColor       = MaterialTheme.colorScheme.onSurface
+    val typeColor      = typeColorMap[type.lowercase()] ?: MaterialTheme.colorScheme.primary
+    val containerColor = MaterialTheme.colorScheme.background
+    val textColor      = MaterialTheme.colorScheme.onSurface
+    val heartBrightRed = Color(0xFFE53935)
+    val heartGrey      = MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
         onClick  = onClick,
@@ -42,25 +46,35 @@ fun PokemonListItem(
             .padding(4.dp)
             .aspectRatio(1f)
     ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-            /* name + id + heart */
+        Box {
+            /* ───────── Sprite ───────── */
+            AsyncImage(
+                model        = imageUrl,
+                contentDescription = name,
+                contentScale = ContentScale.Fit,
+                modifier     = Modifier
+                    .fillMaxWidth(0.90f)
+                    .fillMaxHeight(0.75f)
+                    .align(Alignment.Center)
+                    .offset(y = 36.dp)          // ⬅ move sprite downward
+            )
+
+            /* ───────── Overlay (name, pill, heart) ───────── */
             Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment     = Alignment.CenterVertically
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, top = 6.dp, end = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(
-                        name.replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp
-                    )
-                    Spacer(Modifier.height(4.dp))
+                Text(
+                    name.replaceFirstChar { it.uppercase() },
+                    style      = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    fontSize   = 18.sp,
+                    modifier   = Modifier.weight(1f)
+                )
+
+                Column(horizontalAlignment = Alignment.End) {
                     Box(
                         Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -69,37 +83,24 @@ fun PokemonListItem(
                     ) {
                         Text(
                             "#${id.toString().padStart(3, '0')}",
-                            color = containerColor,
+                            color      = containerColor,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                            fontSize   = 14.sp
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    IconButton(
+                        onClick  = onToggleFavorite,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            if (isFavorite) Icons.Filled.Favorite
+                            else Icons.Outlined.FavoriteBorder,
+                            contentDescription = "toggle favorite",
+                            tint = if (isFavorite) heartBrightRed else heartGrey
                         )
                     }
                 }
-
-                IconButton(onClick = onToggleFavorite) {
-                    Icon(
-                        if (isFavorite) Icons.Filled.Favorite
-                        else Icons.Outlined.FavoriteBorder,
-                        contentDescription = "toggle favorite",
-                        tint = if (isFavorite) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = name,
-                    modifier = Modifier.size(150.dp)
-                )
             }
         }
     }

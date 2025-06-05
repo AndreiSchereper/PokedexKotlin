@@ -1,13 +1,8 @@
 package nl.schereper.andrei.pokedex.views.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -58,7 +53,7 @@ fun NavigationBar(
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 },
-                alwaysShowLabel = false, // optional: only show label when selected
+                alwaysShowLabel = true,
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                     selectedIconColor = MaterialTheme.colorScheme.primary,
