@@ -12,26 +12,32 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import nl.schereper.andrei.pokedex.R
 import nl.schereper.andrei.pokedex.viewmodels.PokedexViewModel
 
+/**
+ * Plain splash that waits until the **first page** and its sprites are cached,
+ * then calls [onFinished].
+ */
 @Composable
 fun SplashScreenView(onFinished: () -> Unit) {
-    val activityOwner = LocalContext.current as ViewModelStoreOwner
-    val context       = LocalContext.current
-    val vm: PokedexViewModel = viewModel(viewModelStoreOwner = activityOwner)
 
-    val firstBatch by vm.pagedList.collectAsState()
+    // Activity-scoped Pokedex VM – already starts loading in init { … }
+    val owner = LocalContext.current as ViewModelStoreOwner
+    val ctx   = LocalContext.current
+    val vm: PokedexViewModel = viewModel(viewModelStoreOwner = owner)
 
-    /* wait until list + sprites are fully cached */
-    LaunchedEffect(firstBatch) {
-        if (firstBatch.isNotEmpty()) {
-            vm.prefetchSpritesBlocking(context)
+    val firstPage by vm.pagedList.collectAsState()
+
+    /* when first page arrives -> cache sprites -> navigate */
+    LaunchedEffect(firstPage) {
+        if (firstPage.isNotEmpty()) {
+            vm.prefetchSpritesBlocking(ctx)
             onFinished()
         }
     }
 
+    /* static logo */
     Box(
         Modifier
             .fillMaxSize()

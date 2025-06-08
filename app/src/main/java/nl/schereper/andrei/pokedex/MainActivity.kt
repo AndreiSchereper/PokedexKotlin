@@ -3,18 +3,22 @@ package nl.schereper.andrei.pokedex
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import nl.schereper.andrei.pokedex.ui.theme.PokedexTheme
 import nl.schereper.andrei.pokedex.views.SplashScreenView
-import nl.schereper.andrei.pokedex.views.components.HomeScaffold   // ← new file below
+import nl.schereper.andrei.pokedex.views.components.HomeScaffold
+
+/** Small holder for route names so we avoid typos. */
+private object Routes {
+    const val Splash = "splash"
+    const val Home   = "home"
+}
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -26,26 +30,34 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Top-level navigation host.
+ *
+ * * Starts at [Routes.Splash].
+ * * Once the splash calls `onFinished`, we navigate to [Routes.Home] and
+ *   **pop** the splash so it can’t be reached via the back button.
+ */
 @Composable
 private fun RootNavGraph() {
     val rootNav = rememberNavController()
 
     NavHost(
-        navController = rootNav,
-        startDestination = "splash"
+        navController    = rootNav,
+        startDestination = Routes.Splash
     ) {
-        /* -----------  splash  ----------- */
-        composable("splash") {
+
+        /* ─── Splash ─── */
+        composable(Routes.Splash) {
             SplashScreenView(
                 onFinished = {
-                    rootNav.navigate("home") {
-                        popUpTo("splash") { inclusive = true } // remove splash from back-stack
+                    rootNav.navigate(Routes.Home) {
+                        popUpTo(Routes.Splash) { inclusive = true }
                     }
                 }
             )
         }
 
-        /* -----------  main scaffold  ----------- */
-        composable("home") { HomeScaffold() }
+        /* ─── Main scaffold ─── */
+        composable(Routes.Home) { HomeScaffold() }
     }
 }

@@ -6,9 +6,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
+/**
+ * Re-usable three-tab bar used in the details screen.
+ *
+ * • [tabs]         – tab titles in display order
+ * • [selected]     – currently-active index
+ * • [onSelect]     – callback when user taps another tab
+ * • [accent]       – colour derived from the first Pokémon type
+ */
 @Composable
 fun DetailsTabBar(
     tabs: List<String>,
@@ -20,22 +29,28 @@ fun DetailsTabBar(
         selectedTabIndex = selected,
         containerColor   = Color.Transparent,
         contentColor     = accent,
-        indicator        = { pos ->
+        /* slim 3-dp indicator in accent colour */
+        indicator = { positions ->
             TabRowDefaults.Indicator(
-                Modifier.tabIndicatorOffset(pos[selected]).height(3.dp),
+                modifier = Modifier
+                    .tabIndicatorOffset(positions[selected])
+                    .height(3.dp),
                 color = accent
             )
         }
     ) {
-        tabs.forEachIndexed { i, t ->
-            Tab(selected = selected == i, onClick = { onSelect(i) }) {
+        tabs.forEachIndexed { index, title ->
+            Tab(
+                selected = selected == index,
+                onClick  = { onSelect(index) }
+            ) {
                 Text(
-                    t,
-                    style      = MaterialTheme.typography.titleMedium,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color      = if (selected == i) accent
+                    text        = title,
+                    style       = MaterialTheme.typography.titleMedium,
+                    fontWeight  = FontWeight.Bold,
+                    color       = if (selected == index) accent
                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier   = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    modifier    = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                 )
             }
         }

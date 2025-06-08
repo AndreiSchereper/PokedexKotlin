@@ -8,16 +8,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import nl.schereper.andrei.pokedex.utils.typeColorMap
 
 @Composable
@@ -28,38 +31,48 @@ fun PokemonListItem(
     id: Int,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier    // allows outer padding if needed
 ) {
+    /* ----- colour setup ----- */
     val typeColor      = typeColorMap[type.lowercase()] ?: MaterialTheme.colorScheme.primary
     val containerColor = MaterialTheme.colorScheme.background
     val textColor      = MaterialTheme.colorScheme.onSurface
-    val heartBrightRed = Color(0xFFE53935)
-    val heartGrey      = MaterialTheme.colorScheme.onSurfaceVariant
+    val heartOn        = Color(0xFFE53935)
+    val heartOff       = MaterialTheme.colorScheme.onSurfaceVariant
+    val heartTint by remember(isFavorite) { mutableStateOf(if (isFavorite) heartOn else heartOff) }
 
+    /* ----- card ----- */
     Card(
         onClick  = onClick,
         shape    = RoundedCornerShape(16.dp),
         border   = BorderStroke(2.dp, typeColor),
         elevation= CardDefaults.cardElevation(10.dp),
         colors   = CardDefaults.cardColors(containerColor, textColor),
-        modifier = Modifier
+        modifier = modifier
             .padding(4.dp)
             .aspectRatio(1f)
     ) {
         Box {
-            /* ───────── Sprite ───────── */
+
+            /* ─── central sprite (unchanged geometry) ─── */
             AsyncImage(
-                model        = imageUrl,
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .placeholder(android.R.color.transparent)
+                    .error(android.R.color.transparent)
+                    .build(),
                 contentDescription = name,
                 contentScale = ContentScale.Fit,
-                modifier     = Modifier
+                modifier = Modifier
                     .fillMaxWidth(0.90f)
                     .fillMaxHeight(0.75f)
                     .align(Alignment.Center)
-                    .offset(y = 36.dp)          // ⬅ move sprite downward
+                    .offset(y = 36.dp)  
             )
 
-            /* ───────── Overlay (name, pill, heart) ───────── */
+            /* ─── overlay: name · id pill · heart ─── */
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -88,16 +101,18 @@ fun PokemonListItem(
                             fontSize   = 14.sp
                         )
                     }
+
                     Spacer(Modifier.height(4.dp))
+
                     IconButton(
                         onClick  = onToggleFavorite,
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            if (isFavorite) Icons.Filled.Favorite
-                            else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "toggle favorite",
-                            tint = if (isFavorite) heartBrightRed else heartGrey
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            tint = heartTint,
+                            contentDescription = if (isFavorite)
+                                "Remove $name from favourites" else "Add $name to favourites"
                         )
                     }
                 }

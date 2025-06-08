@@ -2,20 +2,33 @@ package nl.schereper.andrei.pokedex.models
 
 import com.google.gson.annotations.SerializedName
 
-/* ───────── full Pokémon payload ───────── */
+/* ──────────────────────────────────────────
+   Full payload of GET /pokemon/{id}
+   (only the fields our app actually uses)
+   ────────────────────────────────────────── */
 data class PokemonDetails(
     val id: Int,
     val name: String,
+
+    /** Raw value from API (XP rewarded when caught). */
     @SerializedName("base_experience") val base_experience: Int,
-    val height: Int,          // decimetres
-    val weight: Int,          // hectograms
-    val types: List<PokemonTypeSlot>,
+
+    /** Height in decimetres (API spec). */
+    val height: Int,
+
+    /** Weight in hectograms (API spec). */
+    val weight: Int,
+
+    val types:     List<PokemonTypeSlot>,
     val abilities: List<AbilitySlot>,
-    val stats: List<PokemonStat>,
+    val stats:     List<PokemonStat>,
+
+    /** Nested object that contains the official artwork URL. */
     val sprites: Sprites
 )
 
-/* slots */
+/* ───── small nested DTOs ───── */
+
 data class AbilitySlot(
     val ability: NamedApiResource,
     @SerializedName("is_hidden") val is_hidden: Boolean
@@ -31,13 +44,12 @@ data class PokemonTypeSlot(
     val type: NamedApiResource
 )
 
-/* helper */
 data class NamedApiResource(
     val name: String,
     val url: String
 )
 
-/* only path we need: sprites.other["official-artwork"].front_default */
+/* sprites.other["official-artwork"].front_default */
 data class Sprites(
     val other: OtherSprites?
 ) {
@@ -52,12 +64,12 @@ data class Sprites(
     }
 }
 
-/* pokemon-species/{id} */
+/* ───── species & evolution endpoints (simplified) ───── */
+
 data class PokemonSpecies(
     @SerializedName("evolution_chain") val evolution_chain: EvolutionChainRef
 ) { data class EvolutionChainRef(val url: String) }
 
-/* evolution-chain/{id} (simplified) */
 data class EvolutionChain(
     val id: Int,
     val chain: EvolutionNode
@@ -68,6 +80,8 @@ data class EvolutionNode(
     @SerializedName("evolves_to") val evolves_to: List<EvolutionNode>
 )
 
-/* tiny extension to reach the art URL safely */
+/* ───── convenient extension for Coil ───── */
+
+/** Shorthand to reach the official artwork URL without deep null-checks. */
 val PokemonDetails.imageUrl: String?
     get() = sprites.other?.officialArtwork?.frontDefault

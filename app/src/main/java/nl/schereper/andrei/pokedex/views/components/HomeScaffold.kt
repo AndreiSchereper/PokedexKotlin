@@ -13,12 +13,30 @@ import nl.schereper.andrei.pokedex.views.FavoritesScreenView
 import nl.schereper.andrei.pokedex.views.PokedexScreenView
 import nl.schereper.andrei.pokedex.views.details.PokemonDetailsScreenView
 
+/* ──────────────────────────────────────── */
+/*  Route names in one place               */
+/*  ───────────────────────────────────── */
+private object Routes {
+    const val Pokedex  = "pokedex"
+    const val Favorites = "favorites"
+    const val Details  = "details/{id}"
+}
+
 /**
- * Root scaffold that lives behind the splash screen.
+ * Bottom-nav scaffold shown after the splash screen.
+ *
+ * Tabs:
+ *  • Pokédex (grid + search)
+ *  • Favourites
+ *
+ * A third destination **Details** lives outside the bar but re-uses the
+ * same `NavController`, so back navigation behaves naturally.
  */
 @Composable
 fun HomeScaffold() {
     val navController = rememberNavController()
+
+    /* bottom-bar items */
     val navItems = listOf(
         NavigationItem.Pokedex,
         NavigationItem.Favorites
@@ -26,28 +44,33 @@ fun HomeScaffold() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                navController = navController,
-                items = navItems
-            )
+            NavigationBar(navController, navItems)
         }
     ) { innerPadding ->
+
+        /* ----- per-tab navigation graph ----- */
         NavHost(
             navController = navController,
-            startDestination = NavigationItem.Pokedex.route,
+            startDestination = Routes.Pokedex,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(NavigationItem.Pokedex.route) {
-                PokedexScreenView(navController)          // grid
+
+            /* Pokédex grid */
+            composable(Routes.Pokedex) {
+                PokedexScreenView(navController)
             }
-            composable(NavigationItem.Favorites.route) {
-                FavoritesScreenView(navController)                     // favourites
+
+            /* Favourites grid */
+            composable(Routes.Favorites) {
+                FavoritesScreenView(navController)
             }
+
+            /* Details */
             composable(
-                route = "details/{id}",
+                route = Routes.Details,
                 arguments = listOf(navArgument("id") { type = NavType.IntType })
             ) {
-                PokemonDetailsScreenView(navController)   // detail, back-aware
+                PokemonDetailsScreenView(navController)
             }
         }
     }
