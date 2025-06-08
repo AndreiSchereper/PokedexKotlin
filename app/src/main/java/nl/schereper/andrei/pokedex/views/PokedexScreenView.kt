@@ -11,8 +11,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.flow.collectLatest
@@ -22,8 +24,9 @@ import nl.schereper.andrei.pokedex.views.components.PokemonListItem
 
 @Composable
 fun PokedexScreenView(navController: NavHostController) {
-    val vm: PokedexViewModel      = viewModel()
-    val favVm: FavoritesViewModel = viewModel()
+    val owner: ViewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    val vm   : PokedexViewModel    = viewModel(viewModelStoreOwner = owner)    // 👈 shared
+    val favVm: FavoritesViewModel  = viewModel()
 
     /* UI state */
     val pokemonList by vm.visiblePokemon.collectAsState()

@@ -7,34 +7,39 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import nl.schereper.andrei.pokedex.R
-import nl.schereper.andrei.pokedex.viewmodels.SplashScreenViewModel
+import nl.schereper.andrei.pokedex.viewmodels.PokedexViewModel
 
 @Composable
-fun SplashScreenView(
-    onFinished: () -> Unit
-) {
-    val splashScreenViewModel: SplashScreenViewModel = viewModel()
-    val isLoading by splashScreenViewModel.isLoading.collectAsState()
+fun SplashScreenView(onFinished: () -> Unit) {
+    val activityOwner = LocalContext.current as ViewModelStoreOwner
+    val context       = LocalContext.current
+    val vm: PokedexViewModel = viewModel(viewModelStoreOwner = activityOwner)
 
-    LaunchedEffect(isLoading) {
-        if (!isLoading) {
+    val firstBatch by vm.pagedList.collectAsState()
+
+    /* wait until list + sprites are fully cached */
+    LaunchedEffect(firstBatch) {
+        if (firstBatch.isNotEmpty()) {
+            vm.prefetchSpritesBlocking(context)
             onFinished()
         }
     }
 
     Box(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.pokemonlogo),
+            painter = painterResource(R.drawable.pokemonlogo),
             contentDescription = "Pokédex Logo",
             modifier = Modifier.size(300.dp)
         )
