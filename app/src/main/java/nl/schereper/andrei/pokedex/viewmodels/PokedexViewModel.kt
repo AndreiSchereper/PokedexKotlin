@@ -19,7 +19,7 @@ class PokedexViewModel : ViewModel() {
 
     /* ───── tuning knobs ───── */
     private val pageSize  = 20
-    private val TOTAL_CAP = 1_000      // stop at #1000
+    private val TOTAL_CAP = 1_000          // stop at #1000
 
     /* ───── paging state ───── */
     private val _pagedList = MutableStateFlow<List<PokemonListItemData>>(emptyList())
@@ -43,42 +43,64 @@ class PokedexViewModel : ViewModel() {
 
     private val _searchResults = MutableStateFlow<List<PokemonListItemData>>(emptyList())
 
-    /** Exposed list – paged list or search result depending on query. */
+    /** Stream exposed to UI – either paged list or search results. */
     val visiblePokemon: StateFlow<List<PokemonListItemData>> =
         combine(_searchQuery, _pagedList, _searchResults) { q, paged, search ->
             if (q.isBlank()) paged else search
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /* ────────────────────── init ────────────────────── */
+    /* ───────────────────── init ───────────────────── */
     init {
-        loadPagedBlock()       // first grid page
-        ensureAllNamesLoaded() // names for search
+        loadPagedBlock()        // first page for grid
+        ensureAllNamesLoaded()  // names for search
     }
 
     /* ───────────────── UI entry points ───────────────── */
 
-    /** Called each time the search TextField changes. */
+    /** Called every time the Search TextField changes. */
     fun onSearchQueryChange(newValue: String) {
         _searchQuery.value = newValue
         if (newValue.isBlank()) _searchResults.value = emptyList()
         else                    performSearch(newValue)
     }
 
-    /**
-     * Grid tells us its **last visible index** so we can decide
-     * whether to fetch the next page.
-     */
+    /** Grid tells us which index is currently the last visible item. */
     fun onLastVisible(index: Int) {
-        if (_searchQuery.value.isNotBlank()) return          // searching → no paging
-        if (_isLoading.value || _endReached.value) return    // already loading / done
-        if (index == _pagedList.value.lastIndex)             // bottom reached
-            loadPagedBlock()
+        if (_searchQuery.value.isNotBlank()) return
+        if (_isLoading.value || _endReached.value) return
+        if (index == _pagedList.value.lastIndex) loadPagedBlock()
     }
 
-    /* ───────────────── sprite prefetch (blocking) ───────────────── */
+    /* ────────────── public helper for Favourites ────────────── */
+
+    /**
+     * Ensures a specific Pokémon (by id) is present in [_pagedList].
+     * *Called from Favourites screen so every favourite card is guaranteed
+     * to have data, even if the user never scrolled that far in the Pokédex tab.*
+     */
+    fun ensurePokemonLoaded(id: Int) {
+        if (_pagedList.value.any { it.id == id }) return           // already cached
+
+        viewModelScope.launch {
+            runCatching {
+                val details = ApiClient.apiService.getPokemonDetails(id)
+                val type    = details.types.firstOrNull()?.type?.name ?: "normal"
+
+                _pagedList.update { current ->
+                    current + PokemonListItemData(
+                        name     = details.name,
+                        id       = id,
+                        imageUrl = getPokemonImageUrl(id),
+                        type     = type
+                    )
+                }
+            }
+        }
+    }
+
+    /* ─────────── sprite pre-fetch for splash ─────────── */
     private var didPrefetch = false
 
-    /** Suspends until every sprite in the first page is cached. */
     suspend fun prefetchSpritesBlocking(context: Context) {
         if (didPrefetch || _pagedList.value.isEmpty()) return
         didPrefetch = true
@@ -86,19 +108,18 @@ class PokedexViewModel : ViewModel() {
         withContext(Dispatchers.IO) {
             val loader = context.imageLoader
             _pagedList.value.forEach { item ->
-                val req = ImageRequest.Builder(context)
-                    .data(item.imageUrl)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .build()
-                loader.execute(req) // blocks; SuccessResult | ErrorResult
+                loader.execute(
+                    ImageRequest.Builder(context)
+                        .data(item.imageUrl)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .build()
+                )   // blocks
             }
         }
     }
 
-    /* ───────────────── internal helpers ───────────────── */
-
-    /** Endless-scroll pager. */
+    /* ─────────── internal: endless scroll pager ─────────── */
     private fun loadPagedBlock() {
         if (_isLoading.value || _endReached.value) return
 
@@ -119,14 +140,12 @@ class PokedexViewModel : ViewModel() {
                     .mapNotNull { it.await() }
 
                 currentPage++
-                _pagedList.value = _pagedList.value + newItems
-            } finally {
-                _isLoading.value = false
-            }
+                _pagedList.value += newItems
+            } finally { _isLoading.value = false }
         }
     }
 
-    /** Load all names once for search. */
+    /* ─────────── internal: load all names for search ─────────── */
     private fun ensureAllNamesLoaded() {
         if (_allEntries.value.isNotEmpty() || allNamesJob != null) return
 
@@ -134,13 +153,11 @@ class PokedexViewModel : ViewModel() {
             try {
                 val resp = ApiClient.apiService.getPokemonList(TOTAL_CAP, 0)
                 _allEntries.value = resp.results
-            } finally {
-                allNamesJob = null
-            }
+            } finally { allNamesJob = null }
         }
     }
 
-    /* search */
+    /* ─────────── internal: search by name ─────────── */
     private var searchJob: Job? = null
     private fun performSearch(raw: String) {
         ensureAllNamesLoaded()
@@ -148,9 +165,7 @@ class PokedexViewModel : ViewModel() {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             val q = raw.trim().lowercase()
-            val matches = _allEntries.value
-                .filter { it.name.contains(q) }
-                .take(60)
+            val matches = _allEntries.value.filter { it.name.contains(q) }.take(60)
 
             val detailed = matches
                 .map { entry -> async { toDetailedItem(entry) } }
@@ -160,7 +175,7 @@ class PokedexViewModel : ViewModel() {
         }
     }
 
-    /* convert light entry → full item used by UI */
+    /* convert PokémonEntry → PokémonListItemData */
     private suspend fun toDetailedItem(entry: PokemonEntry): PokemonListItemData? = try {
         val id   = extractPokemonId(entry.url)
         val det  = ApiClient.apiService.getPokemonDetails(id)
